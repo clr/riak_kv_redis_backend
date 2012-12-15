@@ -1,0 +1,14 @@
+{application, erl_hiredis,
+ [
+  {description, "Erlang Wrapper for Hiredis C client for Redis"},
+  {vsn, "2.0"},
+  {modules, [
+             erl_hiredis
+            ]},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {env, []}
+ ]}.
