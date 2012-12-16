@@ -37,25 +37,28 @@
 #include <string.h>
 #include "erl_nif.h"
 
+#include "hiredis/fmacros.h"
 #include "hiredis/hiredis.h"
-
+#include "hiredis/net.h"
+#include "hiredis/sds.h"
 
 static ERL_NIF_TERM
-ping(ErlNifEnv* env, int argc)
+ping(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     redisContext *c;
     redisReply *reply;
-    c = redisConnectUnixNonBlock((char*)"/tmp/redis.sock");
+    printf("about to PING\n");
+    c = redisConnectUnix((const char*)"/tmp/redis.sock");
+
     if (c->err) {
-        printf("Connection error: %s\n", c->errstr);
-        exit(1);
+				return enif_make_tuple1(env, enif_make_atom(env, "redis_connection_error"));
     }
 
     reply = redisCommand(c,"PING");
     printf("PING: %s\n", reply->str);
     freeReplyObject(reply);
-		
-	  return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_ulong(env, 1));
+
+		return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_ulong(env, 1));
 }
 
 static ErlNifFunc funcs[] = {
