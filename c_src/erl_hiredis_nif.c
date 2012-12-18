@@ -28,12 +28,6 @@
  * SUCH DAMAGE.
  */
 
-#include "config.h"
-#if HAVE_STDINT_H
-#include <stdint.h>
-#elif HAVE_INTTYPES_H
-#include <inttypes.h>
-#endif
 #include <string.h>
 #include "erl_nif.h"
 
