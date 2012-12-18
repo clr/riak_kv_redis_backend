@@ -37,32 +37,76 @@
 #include <string.h>
 #include "erl_nif.h"
 
-#include "hiredis/fmacros.h"
 #include "hiredis/hiredis.h"
-#include "hiredis/net.h"
-#include "hiredis/sds.h"
+
+#define MAXBUFLEN       1024
 
 static ERL_NIF_TERM
 ping(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     redisContext *c;
     redisReply *reply;
-    printf("about to PING\n");
+
     c = redisConnectUnix((const char*)"/tmp/redis.sock");
 
     if (c->err) {
-				return enif_make_tuple1(env, enif_make_atom(env, "redis_connection_error"));
+				return enif_make_tuple2(env, enif_make_atom(env, "error"), enif_make_atom(env, "redis_connection_error"));
     }
 
     reply = redisCommand(c,"PING");
-    printf("PING: %s\n", reply->str);
     freeReplyObject(reply);
 
-		return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_ulong(env, 1));
+		return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_atom(env, "pong"));
+}
+
+static ERL_NIF_TERM
+get(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+    redisContext *c;
+    redisReply *reply;
+
+		ErlNifBinary key;
+    if (!enif_inspect_binary(env, argv[0], &key)) return enif_make_badarg(env);
+
+    c = redisConnectUnix((const char*)"/tmp/redis.sock");
+
+    if (c->err) {
+				return enif_make_tuple2(env, enif_make_atom(env, "error"), enif_make_atom(env, "redis_connection_error"));
+    }
+
+    reply = redisCommand(c,"GET %b", key.data, key.size);
+
+		return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_atom(env, reply->str));
+    freeReplyObject(reply);
+}
+
+static ERL_NIF_TERM
+set(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+    redisContext *c;
+    redisReply *reply;
+
+		ErlNifBinary key, val;
+    if (!enif_inspect_binary(env, argv[0], &key)) return enif_make_badarg(env);
+    if (!enif_inspect_binary(env, argv[1], &val)) return enif_make_badarg(env);
+
+    c = redisConnectUnix((const char*)"/tmp/redis.sock");
+
+    if (c->err) {
+				return enif_make_tuple2(env, enif_make_atom(env, "error"), enif_make_atom(env, "redis_connection_error"));
+    }
+
+    //reply = redisCommand(c,"SET %s %s", key, value);
+    reply = redisCommand(c,"SET %b %b", key.data, key.size, val.data, val.size);
+    freeReplyObject(reply);
+
+		return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_atom(env, "set"));
 }
 
 static ErlNifFunc funcs[] = {
     {"ping", 0, ping},
+    {"get",  1, get},
+    {"set",  2, set},
 };
 
 static int

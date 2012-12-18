@@ -13,3 +13,7 @@ The **erl_hiredis** app is built with
 I am trying to learn to write a NIF mostly by examining code from the great Steve
 Vinoski; however, all errors in both code and style are obviously mine
 and mine alone.
+
+Also special thanks to Jesse Williamson
+and Sean Cribbs [https://github.com/seancribbs]
+for helping me figure out my first NIF. :-)

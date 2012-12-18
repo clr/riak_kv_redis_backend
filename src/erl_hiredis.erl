@@ -33,6 +33,8 @@
 
 -module(erl_hiredis).
 -export([ping/0]).
+-export([get/1]).
+-export([set/2]).
 -version(0.1).
 -on_load(init/0).
 
@@ -54,4 +56,14 @@ init() ->
 %% @spec ping() -> {error,...}
 %% @doc Returns an error unless it can ping the UDS via C lib.
 ping() ->
+  {error, "Called Erlang instead of C."}.
+
+%% @spec set(Key, Value) -> {error,...}
+%% @doc Returns an error unless it can ping the UDS via C lib.
+get(Key) ->
+  {error, "Called Erlang instead of C."}.
+
+%% @spec set(Key, Value) -> {error,...}
+%% @doc Returns an error unless it can ping the UDS via C lib.
+set(Key, Value) ->
   {error, "Called Erlang instead of C."}.
