@@ -49,6 +49,7 @@ ping(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 
     reply = redisCommand(c,"PING");
     freeReplyObject(reply);
+    redisFree(c);
 
 		return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_atom(env, "pong"));
 }
@@ -59,30 +60,88 @@ get(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     redisContext *c;
     redisReply *reply;
 
-		ErlNifBinary key;
-    if (!enif_inspect_binary(env, argv[0], &key)) return enif_make_badarg(env);
+		ErlNifBinary uid, ibin;
+    if (!enif_inspect_binary(env, argv[0], &uid))    return enif_make_badarg(env);
 
     c = redisConnectUnix((const char*)"/tmp/redis.sock");
-
     if (c->err) {
 				return enif_make_tuple2(env, enif_make_atom(env, "error"), enif_make_atom(env, "redis_connection_error"));
     }
 
-    reply = redisCommand(c,"GET %b", key.data, key.size);
+    reply = redisCommand(c, "GET %b", uid.data, uid.size);
+    redisFree(c);
 
-		return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_atom(env, reply->str));
-    freeReplyObject(reply);
+		if(reply->type == REDIS_REPLY_NIL){
+      freeReplyObject(reply);
+			return enif_make_tuple2(env, enif_make_atom(env, "error"), enif_make_atom(env, "nil_reply"));
+		} else {
+			enif_alloc_binary(reply->len, &ibin);
+			memcpy(ibin.data, reply->str, reply->len);
+      freeReplyObject(reply);
+			return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_binary(env, &ibin));
+		}
 }
 
 static ERL_NIF_TERM
-set(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+put(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     redisContext *c;
     redisReply *reply;
 
-		ErlNifBinary key, val;
-    if (!enif_inspect_binary(env, argv[0], &key)) return enif_make_badarg(env);
-    if (!enif_inspect_binary(env, argv[1], &val)) return enif_make_badarg(env);
+		ErlNifBinary bucket, key, uid, world, val;
+    if (!enif_inspect_binary(env, argv[0], &bucket)) return enif_make_badarg(env);
+    if (!enif_inspect_binary(env, argv[1], &key))    return enif_make_badarg(env);
+    if (!enif_inspect_binary(env, argv[2], &world))  return enif_make_badarg(env);
+    if (!enif_inspect_binary(env, argv[3], &uid))    return enif_make_badarg(env);
+    if (!enif_inspect_binary(env, argv[4], &val))    return enif_make_badarg(env);
+
+    c = redisConnectUnix((const char*)"/tmp/redis.sock");
+    if (c->err) {
+				return enif_make_tuple2(env, enif_make_atom(env, "error"), enif_make_atom(env, "redis_connection_error"));
+    }
+
+    redisAppendCommand(c, "SET %b %b", uid.data, uid.size, val.data, val.size);
+    redisAppendCommand(c, "SADD %b %b", bucket.data, bucket.size, key.data, key.size);
+    redisAppendCommand(c, "SADD %b %b", world.data, world.size, bucket.data, bucket.size);
+    redisGetReply(c, (void **) &reply);
+    freeReplyObject(reply);
+    redisFree(c);
+
+		return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_atom(env, "put"));
+}
+
+static ERL_NIF_TERM
+delete(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+    redisContext *c;
+    redisReply *reply;
+
+		ErlNifBinary bucket, key, uid, world;
+    if (!enif_inspect_binary(env, argv[0], &bucket)) return enif_make_badarg(env);
+    if (!enif_inspect_binary(env, argv[1], &key))    return enif_make_badarg(env);
+    if (!enif_inspect_binary(env, argv[2], &world))  return enif_make_badarg(env);
+    if (!enif_inspect_binary(env, argv[3], &uid))    return enif_make_badarg(env);
+
+    c = redisConnectUnix((const char*)"/tmp/redis.sock");
+    if (c->err) {
+				return enif_make_tuple2(env, enif_make_atom(env, "error"), enif_make_atom(env, "redis_connection_error"));
+    }
+
+    redisAppendCommand(c, "DEL %b", uid.data, uid.size);
+    redisAppendCommand(c, "SREM %b %b", bucket.data, bucket.size, key.data, key.size);
+    redisAppendCommand(c, "SREM %b %b", world.data, world.size, bucket.data, bucket.size);
+    redisGetReply(c, (void **) &reply);
+    freeReplyObject(reply);
+    redisFree(c);
+
+		return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_atom(env, "put"));
+}
+
+static ERL_NIF_TERM
+drop(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+    redisContext *c;
+    redisReply *reply;
 
     c = redisConnectUnix((const char*)"/tmp/redis.sock");
 
@@ -90,30 +149,24 @@ set(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 				return enif_make_tuple2(env, enif_make_atom(env, "error"), enif_make_atom(env, "redis_connection_error"));
     }
 
-    //reply = redisCommand(c,"SET %s %s", key, value);
-    reply = redisCommand(c,"SET %b %b", key.data, key.size, val.data, val.size);
+    reply = redisCommand(c,"FLUSHALL");
     freeReplyObject(reply);
+    redisFree(c);
 
-		return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_atom(env, "set"));
+		return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_atom(env, "drop"));
 }
 
 static ErlNifFunc funcs[] = {
-    {"ping", 0, ping},
-    {"get",  1, get},
-    {"set",  2, set},
+    {"ping",   0, ping},
+    {"get",    1, get},
+    {"put",    5, put},
+    {"delete", 4, delete},
+    {"drop",   0, drop},
 };
 
 static int
 nifload(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
 {
-    *priv_data = enif_open_resource_type(
-        env,
-        NULL,
-        "erl_hiredis_context",
-        NULL,
-        ERL_NIF_RT_CREATE|ERL_NIF_RT_TAKEOVER,
-        NULL
-    );
     return 0;
 }
 

@@ -34,7 +34,9 @@
 -module(erl_hiredis).
 -export([ping/0]).
 -export([get/1]).
--export([set/2]).
+-export([put/5]).
+-export([delete/4]).
+-export([drop/0]).
 -version(0.1).
 -on_load(init/0).
 
@@ -53,17 +55,17 @@ init() ->
     erlang:load_nif(SoName, 0),
     ok.
 
-%% @spec ping() -> {error,...}
-%% @doc Returns an error unless it can ping the UDS via C lib.
 ping() ->
   {error, "Called Erlang instead of C."}.
 
-%% @spec set(Key, Value) -> {error,...}
-%% @doc Returns an error unless it can ping the UDS via C lib.
-get(Key) ->
+get(Uid) ->
   {error, "Called Erlang instead of C."}.
 
-%% @spec set(Key, Value) -> {error,...}
-%% @doc Returns an error unless it can ping the UDS via C lib.
-set(Key, Value) ->
+put(Bucket, Key, World, Value, Uid) ->
+  {error, "Called Erlang instead of C."}.
+
+delete(Bucket, Key, World, Uid) ->
+  {error, "Called Erlang instead of C."}.
+
+drop() ->
   {error, "Called Erlang instead of C."}.
