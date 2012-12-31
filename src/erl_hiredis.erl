@@ -1,7 +1,6 @@
 %%% @copyright 2012 Casey Rosenthal, All rights reserved. Open source, BSD License
 %%% @version 0.1
 %%%
-%%%
 %%% Copyright (c) 2012 Casey Rosenthal
 %%% All rights reserved.
 %%%
@@ -40,8 +39,6 @@
 -version(0.1).
 -on_load(init/0).
 
-%% @spec init() -> ok
-%% @doc Initialize hiredis NIF.
 init() ->
     SoName = filename:join(case code:priv_dir(?MODULE) of
                                {error, bad_name} ->
@@ -58,13 +55,13 @@ init() ->
 ping() ->
   {error, "Called Erlang instead of C."}.
 
-get(Uid) ->
+get(_) ->
   {error, "Called Erlang instead of C."}.
 
-put(Bucket, Key, World, Value, Uid) ->
+put(_, _, _, _, _) ->
   {error, "Called Erlang instead of C."}.
 
-delete(Bucket, Key, World, Uid) ->
+delete(_, _, _, _) ->
   {error, "Called Erlang instead of C."}.
 
 drop() ->

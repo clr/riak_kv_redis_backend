@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2012 Casey Rosenthal
  * All rights reserved.
+ * BSD License
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -86,7 +87,7 @@ static ERL_NIF_TERM
 put(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     redisContext *c;
-    redisReply *reply;
+    redisReply *reply = NULL;
 
 		ErlNifBinary bucket, key, uid, world, val;
     if (!enif_inspect_binary(env, argv[0], &bucket)) return enif_make_badarg(env);
@@ -100,11 +101,17 @@ put(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 				return enif_make_tuple2(env, enif_make_atom(env, "error"), enif_make_atom(env, "redis_connection_error"));
     }
 
+    redisAppendCommand(c, "MULTI");
     redisAppendCommand(c, "SET %b %b", uid.data, uid.size, val.data, val.size);
     redisAppendCommand(c, "SADD %b %b", bucket.data, bucket.size, key.data, key.size);
     redisAppendCommand(c, "SADD %b %b", world.data, world.size, bucket.data, bucket.size);
-    redisGetReply(c, (void **) &reply);
-    freeReplyObject(reply);
+    redisAppendCommand(c, "EXEC");
+
+    for (int i=0; i<6; i++) {
+			redisReply *reply = NULL;
+			redisGetReply(c, (void **) &reply);
+			free(reply);
+		}
     redisFree(c);
 
 		return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_atom(env, "put"));
